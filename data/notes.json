@@ -1,0 +1,113 @@
+[
+  {
+    "id": "note-2",
+    "title": "Japan Travel Planning",
+    "content": "Plan trip for next spring. Visit Tokyo, Kyoto, and Osaka.",
+    "tags": [
+      "Travel",
+      "Personal"
+    ],
+    "isArchived": false,
+    "createdAt": "2024-10-28T09:30:00.000Z",
+    "updatedAt": "2024-10-28T09:30:00.000Z"
+  },
+  {
+    "id": "note-3",
+    "title": "Favorite Pasta Recipes",
+    "content": "Carbonara, pesto, and arrabbiata recipes to try.",
+    "tags": [
+      "Cooking",
+      "Recipes",
+      "Food"
+    ],
+    "isArchived": false,
+    "createdAt": "2024-10-27T14:00:00.000Z",
+    "updatedAt": "2024-10-27T14:00:00.000Z"
+  },
+  {
+    "id": "note-4",
+    "title": "Home Renovation Ideas",
+    "content": "Kitchen remodel, new flooring, and paint colors.",
+    "tags": [
+      "Home",
+      "Planning"
+    ],
+    "isArchived": false,
+    "createdAt": "2024-10-26T11:00:00.000Z",
+    "updatedAt": "2024-10-26T11:00:00.000Z"
+  },
+  {
+    "id": "note-5",
+    "title": "React Performance Tips",
+    "content": "Memoization, code splitting, and server components.",
+    "tags": [
+      "Dev",
+      "React"
+    ],
+    "isArchived": false,
+    "createdAt": "2024-10-25T16:00:00.000Z",
+    "updatedAt": "2024-10-25T16:00:00.000Z"
+  },
+  {
+    "id": "note-6",
+    "title": "Meal Prep Ideas",
+    "content": "Weekly prep for lunches and dinners.",
+    "tags": [
+      "Cooking",
+      "Health",
+      "Recipes"
+    ],
+    "isArchived": false,
+    "createdAt": "2024-10-24T08:00:00.000Z",
+    "updatedAt": "2024-10-24T08:00:00.000Z"
+  },
+  {
+    "id": "note-7",
+    "title": "Reading List",
+    "content": "Books to read this year.",
+    "tags": [
+      "Personal",
+      "Dev"
+    ],
+    "isArchived": false,
+    "createdAt": "2024-10-23T12:00:00.000Z",
+    "updatedAt": "2024-10-23T12:00:00.000Z"
+  },
+  {
+    "id": "note-8",
+    "title": "Fitness Goals 2025",
+    "content": "Run a half marathon and strength training plan.",
+    "tags": [
+      "Fitness",
+      "Health",
+      "Personal"
+    ],
+    "isArchived": false,
+    "createdAt": "2024-10-22T07:00:00.000Z",
+    "updatedAt": "2024-10-22T07:00:00.000Z"
+  },
+  {
+    "id": "note-9",
+    "title": "TypeScript Notes",
+    "content": "Generics, utility types, and type guards.",
+    "tags": [
+      "Dev",
+      "TypeScript"
+    ],
+    "isArchived": false,
+    "createdAt": "2024-10-21T15:00:00.000Z",
+    "updatedAt": "2024-10-21T15:00:00.000Z"
+  },
+  {
+    "id": "note-10",
+    "title": "Grocery List",
+    "content": "Milk, eggs, bread, vegetables.",
+    "tags": [
+      "Shopping",
+      "Personal"
+    ],
+    "isArchived": false,
+    "createdAt": "2024-10-20T10:00:00.000Z",
+    "updatedAt": "2024-10-20T10:00:00.000Z"
+  }
+]
