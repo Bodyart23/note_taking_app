@@ -30,8 +30,10 @@ export function MobileBottomNav({ activeView, onNavigate }: MobileBottomNavProps
             type="button"
             onClick={() => onNavigate(item.id)}
             className={cn(
-              "flex flex-col items-center gap-1 border-r border-border px-2 py-3 last:border-r-0",
-              isActive ? "text-brand" : "text-muted",
+              "mx-1 flex flex-col items-center gap-1 rounded-lg border-r border-border px-2 py-2 last:border-r-0",
+              isActive
+                ? "bg-selected text-brand"
+                : "text-muted hover:text-foreground",
             )}
           >
             <Icon className="h-5 w-5" />

@@ -12,6 +12,8 @@ import {
 } from "@/lib/api-client";
 import type { Note } from "@/types/note";
 
+import { SettingsPanel } from "@/components/settings/SettingsPanel";
+
 import { MobileBottomNav } from "./MobileBottomNav";
 import { MobileHeader } from "./MobileHeader";
 import { NoteEditor } from "./NoteEditor";
@@ -39,6 +41,9 @@ export function NotesApp() {
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileScreen, setMobileScreen] = useState<"list" | "editor" | "tags" | "settings">(
     "list",
+  );
+  const [mobileSettingsView, setMobileSettingsView] = useState<"menu" | "color-theme">(
+    "menu",
   );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -252,7 +257,11 @@ export function NotesApp() {
         />
 
         {activeView === "settings" ? (
-          <SettingsPanel className="col-span-2" />
+          <SettingsPanel
+            variant="desktop"
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+          />
         ) : (
           <>
             <NoteList
@@ -282,7 +291,7 @@ export function NotesApp() {
               </div>
 
               {error ? (
-                <p className="border-b border-border bg-red-50 px-6 py-2 text-sm text-red-600">
+                <p className="border-b border-border bg-error-bg px-6 py-2 text-sm text-error">
                   {error}
                 </p>
               ) : null}
@@ -312,7 +321,7 @@ export function NotesApp() {
         />
 
         {error ? (
-          <p className="border-b border-border bg-red-50 px-4 py-2 text-sm text-red-600">
+          <p className="border-b border-border bg-error-bg px-4 py-2 text-sm text-error">
             {error}
           </p>
         ) : null}
@@ -330,7 +339,12 @@ export function NotesApp() {
             onCancel={handleCancel}
           />
         ) : activeView === "settings" || mobileScreen === "settings" ? (
-          <SettingsPanel className="flex-1" />
+          <SettingsPanel
+            className="flex-1"
+            variant="mobile"
+            mobileView={mobileSettingsView}
+            onMobileViewChange={setMobileSettingsView}
+          />
         ) : activeView === "tags" || mobileScreen === "tags" ? (
           <MobileTagsPanel
             tags={tags}
@@ -369,6 +383,7 @@ export function NotesApp() {
                 setMobileScreen("tags");
               } else if (view === "settings") {
                 setMobileScreen("settings");
+                setMobileSettingsView("menu");
               } else {
                 setMobileScreen("list");
               }
@@ -377,22 +392,6 @@ export function NotesApp() {
         ) : null}
       </div>
     </div>
-  );
-}
-
-function SettingsPanel({ className = "" }: { className?: string }) {
-  return (
-    <section className={`bg-surface ${className}`}>
-      <div className="border-b border-border px-6 py-6">
-        <h2 className="text-2xl font-bold">Settings</h2>
-      </div>
-      <div className="px-6 py-6 text-sm text-muted">
-        <p>Notes are stored locally in `data/notes.json` on the server.</p>
-        <p className="mt-2">
-          Use the archive action in the editor to move notes to Archived Notes.
-        </p>
-      </div>
-    </section>
   );
 }
 

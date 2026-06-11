@@ -137,7 +137,7 @@ export function NoteEditor({
             <button
               type="button"
               onClick={onDelete}
-              className="text-sm font-medium text-red-600 transition-colors hover:text-red-700"
+              className="text-sm font-medium text-error transition-colors hover:opacity-80"
             >
               Delete
             </button>

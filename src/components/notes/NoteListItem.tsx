@@ -15,8 +15,10 @@ export function NoteListItem({ note, isSelected, onSelect }: NoteListItemProps) 
       type="button"
       onClick={() => onSelect(note.id)}
       className={cn(
-        "w-full border-b border-border px-5 py-4 text-left transition-colors",
-        isSelected ? "bg-selected" : "hover:bg-surface-muted",
+        "w-full px-5 py-4 text-left transition-colors",
+        isSelected
+          ? "mx-2 my-1 w-[calc(100%-1rem)] rounded-lg bg-selected"
+          : "border-b border-border hover:bg-surface-muted",
       )}
     >
       <h3 className="text-base font-bold text-foreground">{note.title}</h3>
