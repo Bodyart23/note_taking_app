@@ -73,14 +73,5 @@
     "isArchived": false,
     "createdAt": "2024-10-21T15:00:00.000Z",
     "updatedAt": "2024-10-21T15:00:00.000Z"
-  },
-  {
-    "id": "431ca182-065d-440c-b0ae-852f3be56e09",
-    "title": "Untitled Note",
-    "content": "",
-    "tags": [],
-    "isArchived": false,
-    "createdAt": "2026-07-08T11:19:19.473Z",
-    "updatedAt": "2026-07-08T11:19:19.473Z"
   }
 ]

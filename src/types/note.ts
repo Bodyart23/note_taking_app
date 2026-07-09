@@ -1,11 +1,12 @@
 export interface Note {
   id: string;
+  userId: string;
   title: string;
   content: string;
   tags: string[];
   isArchived: boolean;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface CreateNoteInput {
@@ -23,6 +24,7 @@ export interface UpdateNoteInput {
 }
 
 export interface NotesQuery {
+  userId: string;
   archived?: boolean;
   search?: string;
   tag?: string;

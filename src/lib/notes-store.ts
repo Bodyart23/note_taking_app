@@ -1,87 +1,110 @@
-import { randomUUID } from "crypto";
-import { promises as fs } from "fs";
-import path from "path";
-
 import type {
   CreateNoteInput,
   Note,
   NotesQuery,
   UpdateNoteInput,
 } from "@/types/note";
+import { ObjectId, WithId, type Collection } from "mongodb";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const NOTES_FILE = path.join(DATA_DIR, "notes.json");
+import { getDb } from "./mongodb";
 
-async function ensureDataFile(): Promise<void> {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-
-  try {
-    await fs.access(NOTES_FILE);
-  } catch {
-    await fs.writeFile(NOTES_FILE, "[]", "utf-8");
-  }
+interface NoteDocument {
+  _id?: ObjectId;
+  userId: string;
+  title: string;
+  content: string;
+  tags: string[];
+  isArchived: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-async function readNotes(): Promise<Note[]> {
-  await ensureDataFile();
-  const raw = await fs.readFile(NOTES_FILE, "utf-8");
-  return JSON.parse(raw) as Note[];
+let indexEnsured = false;
+
+function mapNote(doc: WithId<NoteDocument>): Note {
+  return {
+    id: doc._id.toString(),
+    userId: doc.userId,
+    title: doc.title,
+    content: doc.content,
+    tags: doc.tags,
+    isArchived: doc.isArchived,
+    createdAt: doc.createdAt,
+    updatedAt: doc.updatedAt,
+  };
 }
 
-async function writeNotes(notes: Note[]): Promise<void> {
-  await ensureDataFile();
-  await fs.writeFile(NOTES_FILE, JSON.stringify(notes, null, 2), "utf-8");
-}
+async function getNotesCollection(): Promise<Collection<NoteDocument>> {
+  const db = await getDb();
+  const collection = db.collection<NoteDocument>("notes");
 
-function sortNotes(notes: Note[]): Note[] {
-  return [...notes].sort(
-    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-  );
-}
-
-function filterNotes(notes: Note[], query: NotesQuery = {}): Note[] {
-  let filtered = notes;
-
-  if (query.archived !== undefined) {
-    filtered = filtered.filter((note) => note.isArchived === query.archived);
-  }
-
-  if (query.tag) {
-    const tag = query.tag.toLowerCase();
-    filtered = filtered.filter((note) =>
-      note.tags.some((item) => item.toLowerCase() === tag),
-    );
+  if (!indexEnsured) {
+    await collection.createIndex({ userId: 1, updatedAt: -1 });
+    indexEnsured = true;
   }
 
-  if (query.search) {
-    const term = query.search.toLowerCase();
-    filtered = filtered.filter(
-      (note) =>
-        note.title.toLowerCase().includes(term) ||
-        note.content.toLowerCase().includes(term) ||
-        note.tags.some((item) => item.toLowerCase().includes(term)),
-    );
+  return collection;
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export async function getNotes(query: NotesQuery): Promise<Note[]> {
+  const collection = await getNotesCollection();
+  const { userId, archived, search, tag } = query;
+
+  const filter: Record<string, unknown> = { userId };
+
+  if (archived !== undefined) {
+    filter.isArchived = archived;
   }
 
-  return sortNotes(filtered);
+  if (tag) {
+    filter.tags = {
+      $regex: `^${escapeRegex(tag.trim())}$`,
+      $options: "i",
+    };
+  }
+
+  if (search) {
+    const term = escapeRegex(search.trim());
+    filter.$or = [
+      { title: { $regex: term, $options: "i" } },
+      { content: { $regex: term, $options: "i" } },
+      { tags: { $regex: term, $options: "i" } },
+    ];
+  }
+
+  const notesDocs = await collection
+    .find(filter)
+    .sort({ updatedAt: -1 })
+    .toArray();
+
+  return notesDocs.map(mapNote);
 }
 
-export async function getNotes(query: NotesQuery = {}): Promise<Note[]> {
-  const notes = await readNotes();
-  return filterNotes(notes, query);
+export async function getNoteById(
+  userId: string,
+  id: string,
+): Promise<Note | null> {
+  if (!ObjectId.isValid(id)) return null;
+
+  const collection = await getNotesCollection();
+  const note = await collection.findOne({ _id: new ObjectId(id), userId });
+  if (!note) return null;
+  return mapNote(note);
 }
 
-export async function getNoteById(id: string): Promise<Note | null> {
-  const notes = await readNotes();
-  return notes.find((note) => note.id === id) ?? null;
-}
+export async function createNote(
+  userId: string,
+  input: CreateNoteInput = {},
+): Promise<Note> {
+  const collection = await getNotesCollection();
+  const now = new Date();
 
-export async function createNote(input: CreateNoteInput = {}): Promise<Note> {
-  const notes = await readNotes();
-  const now = new Date().toISOString();
-
-  const note: Note = {
-    id: randomUUID(),
+  const note: NoteDocument = {
+    userId,
     title: input.title ?? "Untitled Note",
     content: input.content ?? "",
     tags: input.tags ?? [],
@@ -90,47 +113,36 @@ export async function createNote(input: CreateNoteInput = {}): Promise<Note> {
     updatedAt: now,
   };
 
-  notes.push(note);
-  await writeNotes(notes);
-  return note;
+  const result = await collection.insertOne(note);
+  return mapNote({ _id: result.insertedId, ...note });
 }
 
 export async function updateNote(
+  userId: string,
   id: string,
   input: UpdateNoteInput,
 ): Promise<Note | null> {
-  const notes = await readNotes();
-  const index = notes.findIndex((note) => note.id === id);
+  if (!ObjectId.isValid(id)) return null;
 
-  if (index === -1) {
-    return null;
-  }
-
-  const updated: Note = {
-    ...notes[index],
-    ...input,
-    updatedAt: new Date().toISOString(),
-  };
-
-  notes[index] = updated;
-  await writeNotes(notes);
-  return updated;
+  const collection = await getNotesCollection();
+  const updated = await collection.findOneAndUpdate(
+    { _id: new ObjectId(id), userId },
+    { $set: { ...input, updatedAt: new Date() } },
+    { returnDocument: "after" },
+  );
+  return updated ? mapNote(updated) : null;
 }
 
-export async function deleteNote(id: string): Promise<boolean> {
-  const notes = await readNotes();
-  const nextNotes = notes.filter((note) => note.id !== id);
+export async function deleteNote(userId: string, id: string): Promise<boolean> {
+  if (!ObjectId.isValid(id)) return false;
 
-  if (nextNotes.length === notes.length) {
-    return false;
-  }
-
-  await writeNotes(nextNotes);
-  return true;
+  const collection = await getNotesCollection();
+  const deleted = await collection.deleteOne({ _id: new ObjectId(id), userId });
+  return deleted.deletedCount === 1;
 }
 
-export async function getAllTags(): Promise<string[]> {
-  const notes = await readNotes();
+export async function getAllTags(userId: string): Promise<string[]> {
+  const notes = await getNotes({ userId });
   const tags = new Set<string>();
 
   for (const note of notes) {

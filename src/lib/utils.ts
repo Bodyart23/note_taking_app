@@ -5,16 +5,16 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatNoteDate(isoDate: string): string {
+export function formatNoteDate(date: string | Date): string {
   return new Intl.DateTimeFormat("en-GB", {
     day: "numeric",
     month: "short",
     year: "numeric",
-  }).format(new Date(isoDate));
+  }).format(new Date(date));
 }
 
-export function formatLastEdited(isoDate: string | null): string {
-  if (!isoDate) return "Not yet saved";
+export function formatLastEdited(date: string | Date | null): string {
+  if (!date) return "Not yet saved";
 
   return new Intl.DateTimeFormat("en-GB", {
     day: "numeric",
@@ -23,7 +23,7 @@ export function formatLastEdited(isoDate: string | null): string {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
-  }).format(new Date(isoDate));
+  }).format(new Date(date));
 }
 
 export function parseTagsInput(value: string): string[] {
