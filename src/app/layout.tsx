@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Newsreader } from "next/font/google";
 
+import { AuthSessionProvider } from "@/components/auth/AuthSessionProvider";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 
 import "./globals.css";
@@ -40,8 +41,10 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${newsreader.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col overflow-hidden bg-background font-sans text-foreground">
-        <ThemeProvider>{children}</ThemeProvider>
+      <body className="h-full flex flex-col overflow-hidden bg-background font-sans text-foreground">
+        <AuthSessionProvider>
+          <ThemeProvider>{children}</ThemeProvider>
+        </AuthSessionProvider>
       </body>
     </html>
   );

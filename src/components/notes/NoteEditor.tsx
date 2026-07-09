@@ -17,8 +17,6 @@ type NoteEditorProps = {
   onChange: (updates: Partial<Pick<Note, "title" | "content" | "tags">>) => void;
   onSave: () => void;
   onCancel: () => void;
-  onDelete?: () => void;
-  onArchive?: () => void;
   variant?: "desktop" | "mobile";
   className?: string;
 };
@@ -29,8 +27,6 @@ export function NoteEditor({
   onChange,
   onSave,
   onCancel,
-  onDelete,
-  onArchive,
   variant = "desktop",
   className,
 }: NoteEditorProps) {
@@ -109,39 +105,24 @@ export function NoteEditor({
       </div>
 
       {variant === "desktop" ? (
-        <div className="flex items-center gap-3 border-t border-border px-5 py-4 lg:px-8">
-          <button
-            type="button"
-            onClick={onSave}
-            className="rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-hover"
-          >
-            Save Note
-          </button>
-          <button
-            type="button"
-            onClick={onCancel}
-            className="rounded-lg bg-surface-muted px-5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-border"
-          >
-            Cancel
-          </button>
-          {onArchive ? (
+        <div className="px-5 pb-4 pt-0 lg:px-8">
+          <div className="border-t border-border" />
+          <div className="mt-4 flex items-center gap-3">
             <button
               type="button"
-              onClick={onArchive}
-              className="ml-auto text-sm font-medium text-muted transition-colors hover:text-foreground"
+              onClick={onSave}
+              className="rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-hover"
             >
-              {note.isArchived ? "Unarchive" : "Archive"}
+              Save Note
             </button>
-          ) : null}
-          {onDelete ? (
             <button
               type="button"
-              onClick={onDelete}
-              className="text-sm font-medium text-error transition-colors hover:opacity-80"
+              onClick={onCancel}
+              className="rounded-lg bg-surface-muted px-5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-border"
             >
-              Delete
+              Cancel
             </button>
-          ) : null}
+          </div>
         </div>
       ) : null}
     </section>

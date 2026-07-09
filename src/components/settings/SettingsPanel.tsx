@@ -15,8 +15,6 @@ type SettingsPanelProps = {
   variant?: "desktop" | "mobile";
   mobileView?: "menu" | "color-theme";
   onMobileViewChange?: (view: "menu" | "color-theme") => void;
-  searchQuery?: string;
-  onSearchChange?: (value: string) => void;
 };
 
 export function SettingsPanel({
@@ -24,8 +22,6 @@ export function SettingsPanel({
   variant = "desktop",
   mobileView = "menu",
   onMobileViewChange,
-  searchQuery = "",
-  onSearchChange,
 }: SettingsPanelProps) {
   const [activeSection, setActiveSection] = useState<SettingsSection>("color-theme");
 
@@ -69,18 +65,6 @@ export function SettingsPanel({
     <section className={cn("col-span-2 flex min-h-0 flex-col bg-surface", className)}>
       <div className="flex items-center gap-3 border-b border-border px-6 py-4">
         <h2 className="mr-4 text-2xl font-bold text-foreground">Settings</h2>
-        <SearchBar
-          value={searchQuery}
-          onChange={onSearchChange ?? (() => undefined)}
-          className="max-w-xl flex-1"
-        />
-        <button
-          type="button"
-          className="rounded-lg p-2 text-muted"
-          aria-label="Settings"
-        >
-          <Settings className="h-5 w-5" />
-        </button>
       </div>
 
       <div className="flex min-h-0 flex-1">

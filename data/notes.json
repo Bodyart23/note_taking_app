@@ -1,17 +1,5 @@
 [
   {
-    "id": "note-2",
-    "title": "Japan Travel Planning",
-    "content": "Plan trip for next spring. Visit Tokyo, Kyoto, and Osaka.",
-    "tags": [
-      "Travel",
-      "Personal"
-    ],
-    "isArchived": false,
-    "createdAt": "2024-10-28T09:30:00.000Z",
-    "updatedAt": "2024-10-28T09:30:00.000Z"
-  },
-  {
     "id": "note-3",
     "title": "Favorite Pasta Recipes",
     "content": "Carbonara, pesto, and arrabbiata recipes to try.",
@@ -22,7 +10,7 @@
     ],
     "isArchived": false,
     "createdAt": "2024-10-27T14:00:00.000Z",
-    "updatedAt": "2024-10-27T14:00:00.000Z"
+    "updatedAt": "2026-07-08T11:19:12.322Z"
   },
   {
     "id": "note-4",
@@ -34,7 +22,7 @@
     ],
     "isArchived": false,
     "createdAt": "2024-10-26T11:00:00.000Z",
-    "updatedAt": "2024-10-26T11:00:00.000Z"
+    "updatedAt": "2026-06-11T17:50:47.275Z"
   },
   {
     "id": "note-5",
@@ -62,18 +50,6 @@
     "updatedAt": "2024-10-24T08:00:00.000Z"
   },
   {
-    "id": "note-7",
-    "title": "Reading List",
-    "content": "Books to read this year.",
-    "tags": [
-      "Personal",
-      "Dev"
-    ],
-    "isArchived": false,
-    "createdAt": "2024-10-23T12:00:00.000Z",
-    "updatedAt": "2024-10-23T12:00:00.000Z"
-  },
-  {
     "id": "note-8",
     "title": "Fitness Goals 2025",
     "content": "Run a half marathon and strength training plan.",
@@ -99,15 +75,12 @@
     "updatedAt": "2024-10-21T15:00:00.000Z"
   },
   {
-    "id": "note-10",
-    "title": "Grocery List",
-    "content": "Milk, eggs, bread, vegetables.",
-    "tags": [
-      "Shopping",
-      "Personal"
-    ],
+    "id": "431ca182-065d-440c-b0ae-852f3be56e09",
+    "title": "Untitled Note",
+    "content": "",
+    "tags": [],
     "isArchived": false,
-    "createdAt": "2024-10-20T10:00:00.000Z",
-    "updatedAt": "2024-10-20T10:00:00.000Z"
+    "createdAt": "2026-07-08T11:19:19.473Z",
+    "updatedAt": "2026-07-08T11:19:19.473Z"
   }
 ]

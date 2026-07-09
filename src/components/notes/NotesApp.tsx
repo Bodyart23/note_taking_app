@@ -1,7 +1,7 @@
 "use client";
 
 import { Settings } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   createNote,
@@ -16,10 +16,14 @@ import { SettingsPanel } from "@/components/settings/SettingsPanel";
 
 import { MobileBottomNav } from "./MobileBottomNav";
 import { MobileHeader } from "./MobileHeader";
+import { NoteActions } from "./NoteAction";
 import { NoteEditor } from "./NoteEditor";
 import { NoteList } from "./NoteList";
 import { SearchBar } from "./SearchBar";
 import { Sidebar, type NavView } from "./Sidebar";
+import { TagsList } from "./TagsList";
+
+type MobileScreen = "list" | "editor" | "tags" | "tag-notes" | "settings";
 
 type DraftNote = Pick<Note, "title" | "content" | "tags">;
 
@@ -39,12 +43,10 @@ export function NotesApp() {
   const [activeView, setActiveView] = useState<NavView | "search">("all");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [mobileScreen, setMobileScreen] = useState<"list" | "editor" | "tags" | "settings">(
-    "list",
-  );
-  const [mobileSettingsView, setMobileSettingsView] = useState<"menu" | "color-theme">(
-    "menu",
-  );
+  const [mobileScreen, setMobileScreen] = useState<MobileScreen>("list");
+  const [mobileSettingsView, setMobileSettingsView] = useState<
+    "menu" | "color-theme"
+  >("menu");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,7 +60,11 @@ export function NotesApp() {
     return { ...selectedNote, ...draft };
   }, [selectedNote, draft]);
 
-  const isDirty = selectedNote && draft ? isDraftDirty(selectedNote, draft) : false;
+  const isDirty =
+    selectedNote && draft ? isDraftDirty(selectedNote, draft) : false;
+
+  const isMobileTagList = activeView === "tags" && mobileScreen === "tags";
+  const applyTagFilter = selectedTag !== null && !isMobileTagList;
 
   const loadNotes = useCallback(
     async (preserveSelection = true) => {
@@ -69,12 +75,16 @@ export function NotesApp() {
         const data = await fetchNotes({
           archived: activeView === "archived",
           search: searchQuery || undefined,
-          tag: selectedTag ?? undefined,
+          tag: applyTagFilter ? (selectedTag ?? undefined) : undefined,
         });
 
         setNotes(data);
         setSelectedNoteId((currentId) => {
-          if (preserveSelection && currentId && data.some((note) => note.id === currentId)) {
+          if (
+            preserveSelection &&
+            currentId &&
+            data.some((note) => note.id === currentId)
+          ) {
             return currentId;
           }
 
@@ -108,7 +118,7 @@ export function NotesApp() {
         setIsLoading(false);
       }
     },
-    [activeView, searchQuery, selectedNoteId, selectedTag],
+    [activeView, applyTagFilter, searchQuery, selectedNoteId, selectedTag],
   );
 
   const loadTags = useCallback(async () => {
@@ -183,7 +193,7 @@ export function NotesApp() {
         tags: updated.tags,
       });
       await loadTags();
-      setMobileScreen("list");
+      setMobileScreen(selectedTag ? "tag-notes" : "list");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save note");
     }
@@ -197,7 +207,7 @@ export function NotesApp() {
       content: selectedNote.content,
       tags: selectedNote.tags,
     });
-    setMobileScreen("list");
+    setMobileScreen(selectedTag ? "tag-notes" : "list");
   };
 
   const handleDelete = async () => {
@@ -209,10 +219,22 @@ export function NotesApp() {
       setDraft(null);
       await loadNotes();
       await loadTags();
-      setMobileScreen("list");
+      setMobileScreen(selectedTag ? "tag-notes" : "list");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete note");
     }
+  };
+
+  const handleBackFromTagNotes = () => {
+    setSelectedTag(null);
+    setMobileScreen("tags");
+  };
+
+  const handleSelectTag = (tag: string) => {
+    setSelectedTag(tag);
+    setActiveView("tags");
+    setMobileScreen("tag-notes");
+    setSearchQuery("");
   };
 
   const handleArchive = async () => {
@@ -235,9 +257,14 @@ export function NotesApp() {
   const listTitle =
     activeView === "archived"
       ? "Archived Notes"
-      : selectedTag
-        ? selectedTag
+      : applyTagFilter && selectedTag
+        ? `Notes Tagged: ${selectedTag}`
         : "All Notes";
+
+  const listSubtitle =
+    applyTagFilter && selectedTag
+      ? `All notes with the '${selectedTag}' tag are shown here.`
+      : undefined;
 
   const showMobileSearch = activeView === "search" && mobileScreen === "list";
 
@@ -251,21 +278,27 @@ export function NotesApp() {
           onNavigate={(view) => {
             setActiveView(view);
             setSearchQuery("");
+            if (view !== "all") {
+              setSelectedTag(null);
+            }
           }}
-          onSelectTag={setSelectedTag}
+          onSelectTag={(tag) => {
+            setSelectedTag(tag);
+            setActiveView("all");
+            setSearchQuery("");
+          }}
           onOpenSettings={() => setActiveView("settings")}
         />
 
         {activeView === "settings" ? (
           <SettingsPanel
             variant="desktop"
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
           />
         ) : (
-          <>
+          <Fragment>
             <NoteList
               title={listTitle}
+              subtitle={listSubtitle}
               notes={notes}
               selectedNoteId={selectedNoteId}
               onSelectNote={selectNote}
@@ -274,7 +307,7 @@ export function NotesApp() {
             />
 
             <div className="flex min-h-0 flex-col">
-              <div className="flex items-center gap-3 border-b border-border px-6 py-4">
+              <div className="flex items-center gap-3 border-b border-border px-6 py-4 bg-surface">
                 <SearchBar
                   value={searchQuery}
                   onChange={setSearchQuery}
@@ -295,29 +328,38 @@ export function NotesApp() {
                   {error}
                 </p>
               ) : null}
-
-              <NoteEditor
-                note={editorNote}
-                isDirty={Boolean(isDirty)}
-                onChange={(updates) =>
-                  setDraft((current) => (current ? { ...current, ...updates } : current))
-                }
-                onSave={() => void handleSave()}
-                onCancel={handleCancel}
-                onDelete={() => void handleDelete()}
-                onArchive={() => void handleArchive()}
-              />
+              <div className="flex h-full flex-row">
+                <NoteEditor
+                  note={editorNote}
+                  isDirty={Boolean(isDirty)}
+                  className="w-3/4"
+                  onChange={(updates) =>
+                    setDraft((current) =>
+                      current ? { ...current, ...updates } : current,
+                    )
+                  }
+                  onSave={() => void handleSave()}
+                  onCancel={handleCancel}
+                />
+                <NoteActions
+                  note={editorNote}
+                  onDelete={() => void handleDelete()}
+                  onArchive={() => void handleArchive()}
+                />
+              </div>
             </div>
-          </>
+          </Fragment>
         )}
       </div>
 
       <div className="flex h-full min-h-0 flex-col lg:hidden">
         <MobileHeader
           mode={mobileScreen === "editor" ? "editor" : "main"}
-          onBack={() => setMobileScreen("list")}
+          onBack={() => setMobileScreen(selectedTag ? "tag-notes" : "list")}
           onCancel={handleCancel}
           onSave={() => void handleSave()}
+          onDelete={() => void handleDelete()}
+          onArchive={() => void handleArchive()}
         />
 
         {error ? (
@@ -333,7 +375,9 @@ export function NotesApp() {
             variant="mobile"
             className="flex-1"
             onChange={(updates) =>
-              setDraft((current) => (current ? { ...current, ...updates } : current))
+              setDraft((current) =>
+                current ? { ...current, ...updates } : current,
+              )
             }
             onSave={() => void handleSave()}
             onCancel={handleCancel}
@@ -345,16 +389,19 @@ export function NotesApp() {
             mobileView={mobileSettingsView}
             onMobileViewChange={setMobileSettingsView}
           />
-        ) : activeView === "tags" || mobileScreen === "tags" ? (
-          <MobileTagsPanel
-            tags={tags}
-            selectedTag={selectedTag}
-            onSelectTag={(tag) => {
-              setSelectedTag(tag);
-              setActiveView("all");
-              setMobileScreen("list");
-            }}
+        ) : mobileScreen === "tag-notes" && selectedTag ? (
+          <NoteList
+            title={listTitle}
+            subtitle={listSubtitle}
+            notes={notes}
+            selectedNoteId={selectedNoteId}
+            onSelectNote={selectNote}
+            onCreateNote={() => void handleCreateNote()}
+            onGoBack={handleBackFromTagNotes}
+            isLoading={isLoading}
           />
+        ) : activeView === "tags" || mobileScreen === "tags" ? (
+          <TagsList tags={tags} onSelectTag={handleSelectTag} />
         ) : (
           <div className="flex min-h-0 flex-1 flex-col">
             {showMobileSearch ? (
@@ -365,6 +412,7 @@ export function NotesApp() {
 
             <NoteList
               title={listTitle}
+              subtitle={listSubtitle}
               notes={notes}
               selectedNoteId={selectedNoteId}
               onSelectNote={selectNote}
@@ -379,12 +427,16 @@ export function NotesApp() {
             activeView={activeView}
             onNavigate={(view) => {
               setActiveView(view);
+              setSearchQuery("");
               if (view === "tags") {
+                setSelectedTag(null);
                 setMobileScreen("tags");
               } else if (view === "settings") {
+                setSelectedTag(null);
                 setMobileScreen("settings");
                 setMobileSettingsView("menu");
               } else {
+                setSelectedTag(null);
                 setMobileScreen("list");
               }
             }}
@@ -392,36 +444,5 @@ export function NotesApp() {
         ) : null}
       </div>
     </div>
-  );
-}
-
-function MobileTagsPanel({
-  tags,
-  selectedTag,
-  onSelectTag,
-}: {
-  tags: string[];
-  selectedTag: string | null;
-  onSelectTag: (tag: string) => void;
-}) {
-  return (
-    <section className="flex-1 overflow-y-auto px-4 py-4">
-      <h2 className="text-xl font-bold">Tags</h2>
-      <ul className="mt-4 space-y-2">
-        {tags.map((tag) => (
-          <li key={tag}>
-            <button
-              type="button"
-              onClick={() => onSelectTag(tag)}
-              className={`w-full rounded-lg border border-border px-4 py-3 text-left text-sm ${
-                selectedTag === tag ? "bg-selected" : "bg-surface"
-              }`}
-            >
-              {tag}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </section>
   );
 }

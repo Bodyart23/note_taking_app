@@ -1,4 +1,4 @@
-import { ChevronLeft } from "lucide-react";
+import { Archive, ChevronLeft, Trash2 } from "lucide-react";
 
 import { Logo } from "./Logo";
 
@@ -7,6 +7,8 @@ type MobileHeaderProps = {
   onBack?: () => void;
   onCancel?: () => void;
   onSave?: () => void;
+  onDelete?: () => void;
+  onArchive?: () => void;
 };
 
 export function MobileHeader({
@@ -14,6 +16,8 @@ export function MobileHeader({
   onBack,
   onCancel,
   onSave,
+  onDelete,
+  onArchive,
 }: MobileHeaderProps) {
   if (mode === "editor") {
     return (
@@ -28,6 +32,20 @@ export function MobileHeader({
             Go Back
           </button>
           <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={onArchive}
+            >
+              <Archive className="h-5 w-5 shrink-0 text-muted" strokeWidth={1.75} />
+            </button>
+
+            <button
+              type="button"
+              onClick={onDelete}             
+            >
+              <Trash2 className="h-5 w-5 shrink-0 text-muted" strokeWidth={1.75} />
+            </button>
+
             <button
               type="button"
               onClick={onCancel}
