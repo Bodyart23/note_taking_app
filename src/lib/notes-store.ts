@@ -124,10 +124,20 @@ export async function updateNote(
 ): Promise<Note | null> {
   if (!ObjectId.isValid(id)) return null;
 
+  // Allowlist only — never spread raw input into $set (mass-assignment risk).
+  const $set: Partial<
+    Pick<NoteDocument, "title" | "content" | "tags" | "isArchived" | "updatedAt">
+  > = { updatedAt: new Date() };
+
+  if (input.title !== undefined) $set.title = input.title;
+  if (input.content !== undefined) $set.content = input.content;
+  if (input.tags !== undefined) $set.tags = input.tags;
+  if (input.isArchived !== undefined) $set.isArchived = input.isArchived;
+
   const collection = await getNotesCollection();
   const updated = await collection.findOneAndUpdate(
     { _id: new ObjectId(id), userId },
-    { $set: { ...input, updatedAt: new Date() } },
+    { $set },
     { returnDocument: "after" },
   );
   return updated ? mapNote(updated) : null;

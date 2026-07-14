@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { requireUserId } from "@/lib/auth/require-user";
 import { deleteNote, getNoteById, updateNote } from "@/lib/notes-store";
-import type { UpdateNoteInput } from "@/types/note";
+import { updateNoteSchema } from "@/lib/validation/notes";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -27,8 +27,30 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   if (authResult instanceof NextResponse) return authResult;
 
   const { id } = await context.params;
-  const body = (await request.json()) as UpdateNoteInput;
-  const note = await updateNote(authResult.userId, id, body);
+
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { message: "Invalid request body." },
+      { status: 400 },
+    );
+  }
+
+  const parsed = updateNoteSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      {
+        message: "Validation failed.",
+        errors: parsed.error.flatten().fieldErrors,
+      },
+      { status: 400 },
+    );
+  }
+
+  const note = await updateNote(authResult.userId, id, parsed.data);
 
   if (!note) {
     return NextResponse.json({ message: "Note not found" }, { status: 404 });

@@ -1,3 +1,10 @@
+import type {
+  CreateNoteInput,
+  UpdateNoteInput,
+} from "@/lib/validation/notes";
+
+export type { CreateNoteInput, UpdateNoteInput };
+
 export interface Note {
   id: string;
   userId: string;
@@ -7,20 +14,6 @@ export interface Note {
   isArchived: boolean;
   createdAt: Date;
   updatedAt: Date;
-}
-
-export interface CreateNoteInput {
-  title?: string;
-  content?: string;
-  tags?: string[];
-  isArchived?: boolean;
-}
-
-export interface UpdateNoteInput {
-  title?: string;
-  content?: string;
-  tags?: string[];
-  isArchived?: boolean;
 }
 
 export interface NotesQuery {
