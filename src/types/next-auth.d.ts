@@ -19,5 +19,9 @@ declare module "next-auth/jwt" {
   interface JWT {
     id?: string;
     role?: UserRole;
+    /** Unix timestamp (seconds) when the session was issued. */
+    loginAt?: number;
+    /** Absolute Unix timestamp (seconds) when the session must expire. */
+    expiresAt?: number;
   }
 }

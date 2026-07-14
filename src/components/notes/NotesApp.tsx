@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings } from "lucide-react";
+import { Archive, Settings, Trash2 } from "lucide-react";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 
 import {
@@ -13,6 +13,7 @@ import {
 import type { Note } from "@/types/note";
 
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
 import { MobileBottomNav } from "./MobileBottomNav";
 import { MobileHeader } from "./MobileHeader";
@@ -24,6 +25,7 @@ import { Sidebar, type NavView } from "./Sidebar";
 import { TagsList } from "./TagsList";
 
 type MobileScreen = "list" | "editor" | "tags" | "tag-notes" | "settings";
+type ConfirmAction = "delete" | "archive" | null;
 
 type DraftNote = Pick<Note, "title" | "content" | "tags">;
 
@@ -47,6 +49,8 @@ export function NotesApp() {
   const [mobileSettingsView, setMobileSettingsView] = useState<
     "menu" | "color-theme" | "password"
   >("menu");
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -213,15 +217,19 @@ export function NotesApp() {
   const handleDelete = async () => {
     if (!selectedNoteId) return;
 
+    setIsConfirming(true);
     try {
       await deleteNote(selectedNoteId);
       setSelectedNoteId(null);
       setDraft(null);
+      setConfirmAction(null);
       await loadNotes();
       await loadTags();
       setMobileScreen(selectedTag ? "tag-notes" : "list");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete note");
+    } finally {
+      setIsConfirming(false);
     }
   };
 
@@ -240,6 +248,7 @@ export function NotesApp() {
   const handleArchive = async () => {
     if (!selectedNoteId || !selectedNote) return;
 
+    setIsConfirming(true);
     try {
       const updated = await updateNote(selectedNoteId, {
         isArchived: !selectedNote.isArchived,
@@ -247,12 +256,28 @@ export function NotesApp() {
       setNotes((current) =>
         current.map((note) => (note.id === updated.id ? updated : note)),
       );
+      setConfirmAction(null);
       await loadNotes();
       await loadTags();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to archive note");
+    } finally {
+      setIsConfirming(false);
     }
   };
+
+  const handleConfirm = () => {
+    if (confirmAction === "delete") {
+      void handleDelete();
+      return;
+    }
+
+    if (confirmAction === "archive") {
+      void handleArchive();
+    }
+  };
+
+  const isArchivedNote = Boolean(selectedNote?.isArchived);
 
   const listTitle =
     activeView === "archived"
@@ -343,8 +368,8 @@ export function NotesApp() {
                 />
                 <NoteActions
                   note={editorNote}
-                  onDelete={() => void handleDelete()}
-                  onArchive={() => void handleArchive()}
+                  onDelete={() => setConfirmAction("delete")}
+                  onArchive={() => setConfirmAction("archive")}
                 />
               </div>
             </div>
@@ -358,8 +383,8 @@ export function NotesApp() {
           onBack={() => setMobileScreen(selectedTag ? "tag-notes" : "list")}
           onCancel={handleCancel}
           onSave={() => void handleSave()}
-          onDelete={() => void handleDelete()}
-          onArchive={() => void handleArchive()}
+          onDelete={() => setConfirmAction("delete")}
+          onArchive={() => setConfirmAction("archive")}
         />
 
         {error ? (
@@ -443,6 +468,38 @@ export function NotesApp() {
           />
         ) : null}
       </div>
+
+      <ConfirmModal
+        open={confirmAction === "delete"}
+        title="Delete Note"
+        description="Are you sure you want to permanently delete this note? This action cannot be undone."
+        icon={<Trash2 className="h-5 w-5" strokeWidth={1.75} />}
+        confirmLabel="Delete Note"
+        variant="danger"
+        isConfirming={isConfirming}
+        onConfirm={handleConfirm}
+        onCancel={() => {
+          if (!isConfirming) setConfirmAction(null);
+        }}
+      />
+
+      <ConfirmModal
+        open={confirmAction === "archive"}
+        title={isArchivedNote ? "Unarchive Note" : "Archive Note"}
+        description={
+          isArchivedNote
+            ? "Are you sure you want to unarchive this note? It will appear in All Notes again."
+            : "Are you sure you want to archive this note? You can find it in the Archived Notes section and restore it anytime."
+        }
+        icon={<Archive className="h-5 w-5" strokeWidth={1.75} />}
+        confirmLabel={isArchivedNote ? "Unarchive Note" : "Archive Note"}
+        variant="primary"
+        isConfirming={isConfirming}
+        onConfirm={handleConfirm}
+        onCancel={() => {
+          if (!isConfirming) setConfirmAction(null);
+        }}
+      />
     </div>
   );
 }
