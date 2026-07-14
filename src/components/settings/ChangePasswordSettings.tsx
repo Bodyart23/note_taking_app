@@ -5,21 +5,22 @@ import { cn } from "@/lib/utils";
 import { Eye, EyeOff, Info, Loader2 } from "lucide-react";
 import { useState } from "react";
 
+import { useToast } from "@/components/ui/Toast";
+
 const inputClassName =
   "h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus:border-brand disabled:opacity-60";
 
 export function ChangePasswordSettings() {
+  const { showToast } = useToast();
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    setSuccess(null);
 
     const form = event.currentTarget;
     const formData = new FormData(form);
@@ -42,7 +43,7 @@ export function ChangePasswordSettings() {
     try {
       await changePassword({ currentPassword, newPassword });
       form.reset();
-      setSuccess("Password updated successfully.");
+      showToast({ message: "Password changed successfully!" });
     } catch (submitError) {
       setError(
         submitError instanceof Error
@@ -71,12 +72,6 @@ export function ChangePasswordSettings() {
             className="rounded-lg bg-error-bg px-3 py-2 text-sm text-error"
           >
             {error}
-          </p>
-        ) : null}
-
-        {success ? (
-          <p className="rounded-lg bg-surface-muted px-3 py-2 text-sm text-foreground">
-            {success}
           </p>
         ) : null}
 

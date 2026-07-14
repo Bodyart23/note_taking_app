@@ -14,6 +14,7 @@ import type { Note } from "@/types/note";
 
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { useToast } from "@/components/ui/Toast";
 
 import { MobileBottomNav } from "./MobileBottomNav";
 import { MobileHeader } from "./MobileHeader";
@@ -29,6 +30,27 @@ type ConfirmAction = "delete" | "archive" | null;
 
 type DraftNote = Pick<Note, "title" | "content" | "tags">;
 
+const LOCAL_NOTE_PREFIX = "local-";
+
+function isLocalNoteId(id: string): boolean {
+  return id.startsWith(LOCAL_NOTE_PREFIX);
+}
+
+function createLocalNote(): Note {
+  const now = new Date();
+
+  return {
+    id: `${LOCAL_NOTE_PREFIX}${crypto.randomUUID()}`,
+    userId: "",
+    title: "Untitled Note",
+    content: "",
+    tags: [],
+    isArchived: false,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
 function isDraftDirty(note: Note, draft: DraftNote): boolean {
   return (
     note.title !== draft.title ||
@@ -38,7 +60,9 @@ function isDraftDirty(note: Note, draft: DraftNote): boolean {
 }
 
 export function NotesApp() {
+  const { showToast } = useToast();
   const [notes, setNotes] = useState<Note[]>([]);
+  const [pendingNotes, setPendingNotes] = useState<Note[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftNote | null>(null);
@@ -54,9 +78,32 @@ export function NotesApp() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const goToArchivedNotes = () => {
+    setActiveView("archived");
+    setSelectedTag(null);
+    setSearchQuery("");
+    setMobileScreen("list");
+  };
+
+  const goToAllNotes = () => {
+    setActiveView("all");
+    setSelectedTag(null);
+    setSearchQuery("");
+    setMobileScreen("list");
+  };
+
+  const visibleNotes = useMemo(() => {
+    const matchingPending = pendingNotes.filter((note) => {
+      if (activeView === "archived") return note.isArchived;
+      return !note.isArchived;
+    });
+
+    return [...matchingPending, ...notes];
+  }, [activeView, notes, pendingNotes]);
+
   const selectedNote = useMemo(
-    () => notes.find((note) => note.id === selectedNoteId) ?? null,
-    [notes, selectedNoteId],
+    () => visibleNotes.find((note) => note.id === selectedNoteId) ?? null,
+    [visibleNotes, selectedNoteId],
   );
 
   const editorNote = useMemo(() => {
@@ -84,6 +131,11 @@ export function NotesApp() {
 
         setNotes(data);
         setSelectedNoteId((currentId) => {
+          // Pending local drafts live outside server results — keep them selected.
+          if (preserveSelection && currentId && isLocalNoteId(currentId)) {
+            return currentId;
+          }
+
           if (
             preserveSelection &&
             currentId &&
@@ -96,6 +148,11 @@ export function NotesApp() {
         });
         setDraft((currentDraft) => {
           const currentId = preserveSelection ? selectedNoteId : null;
+
+          if (currentId && isLocalNoteId(currentId) && currentDraft) {
+            return currentDraft;
+          }
+
           const nextId =
             currentId && data.some((note) => note.id === currentId)
               ? currentId
@@ -151,8 +208,31 @@ export function NotesApp() {
     };
   }, [loadNotes, loadTags]);
 
+  // Pending notes are filtered by view; drop selection if the draft left the list.
+  useEffect(() => {
+    if (
+      !selectedNoteId ||
+      !isLocalNoteId(selectedNoteId) ||
+      visibleNotes.some((note) => note.id === selectedNoteId)
+    ) {
+      return;
+    }
+
+    const nextNote = visibleNotes[0] ?? null;
+    setSelectedNoteId(nextNote?.id ?? null);
+    setDraft(
+      nextNote
+        ? {
+            title: nextNote.title,
+            content: nextNote.content,
+            tags: nextNote.tags,
+          }
+        : null,
+    );
+  }, [selectedNoteId, visibleNotes]);
+
   const selectNote = (id: string) => {
-    const note = notes.find((item) => item.id === id);
+    const note = visibleNotes.find((item) => item.id === id);
     if (!note) return;
 
     setSelectedNoteId(id);
@@ -164,47 +244,91 @@ export function NotesApp() {
     setMobileScreen("editor");
   };
 
-  const handleCreateNote = async () => {
-    try {
-      const note = await createNote();
-      setNotes((current) => [note, ...current]);
-      setSelectedNoteId(note.id);
-      setDraft({
-        title: note.title,
-        content: note.content,
-        tags: note.tags,
-      });
-      setActiveView("all");
-      setSelectedTag(null);
-      setMobileScreen("editor");
-      await loadTags();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create note");
-    }
+  const handleCreateNote = () => {
+    const note = createLocalNote();
+    setPendingNotes((current) => [note, ...current]);
+    setSelectedNoteId(note.id);
+    setDraft({
+      title: note.title,
+      content: note.content,
+      tags: note.tags,
+    });
+    setActiveView("all");
+    setSelectedTag(null);
+    setError(null);
+    setMobileScreen("editor");
   };
 
   const handleSave = async () => {
     if (!selectedNoteId || !draft) return;
 
     try {
-      const updated = await updateNote(selectedNoteId, draft);
-      setNotes((current) =>
-        current.map((note) => (note.id === updated.id ? updated : note)),
-      );
-      setDraft({
-        title: updated.title,
-        content: updated.content,
-        tags: updated.tags,
-      });
+      if (isLocalNoteId(selectedNoteId)) {
+        const created = await createNote({
+          ...draft,
+          isArchived: selectedNote?.isArchived ?? false,
+        });
+        setPendingNotes((current) =>
+          current.filter((note) => note.id !== selectedNoteId),
+        );
+        setNotes((current) => [created, ...current]);
+        setSelectedNoteId(created.id);
+        setDraft({
+          title: created.title,
+          content: created.content,
+          tags: created.tags,
+        });
+      } else {
+        const updated = await updateNote(selectedNoteId, draft);
+        setNotes((current) =>
+          current.map((note) => (note.id === updated.id ? updated : note)),
+        );
+        setDraft({
+          title: updated.title,
+          content: updated.content,
+          tags: updated.tags,
+        });
+      }
+
       await loadTags();
       setMobileScreen(selectedTag ? "tag-notes" : "list");
+      showToast({ message: "Note saved successfully!" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save note");
     }
   };
 
+  const discardPendingNote = (discardedId: string) => {
+    setPendingNotes((current) => {
+      const remainingPending = current.filter((note) => note.id !== discardedId);
+      const matchingPending = remainingPending.filter((note) =>
+        activeView === "archived" ? note.isArchived : !note.isArchived,
+      );
+      const nextNote = matchingPending[0] ?? notes[0] ?? null;
+
+      setSelectedNoteId(nextNote?.id ?? null);
+      setDraft(
+        nextNote
+          ? {
+              title: nextNote.title,
+              content: nextNote.content,
+              tags: nextNote.tags,
+            }
+          : null,
+      );
+
+      return remainingPending;
+    });
+  };
+
   const handleCancel = () => {
     if (!selectedNote) return;
+
+    if (isLocalNoteId(selectedNote.id)) {
+      discardPendingNote(selectedNote.id);
+      setMobileScreen(selectedTag ? "tag-notes" : "list");
+      return;
+    }
 
     setDraft({
       title: selectedNote.title,
@@ -219,6 +343,14 @@ export function NotesApp() {
 
     setIsConfirming(true);
     try {
+      if (isLocalNoteId(selectedNoteId)) {
+        discardPendingNote(selectedNoteId);
+        setConfirmAction(null);
+        setMobileScreen(selectedTag ? "tag-notes" : "list");
+        showToast({ message: "Note permanently deleted." });
+        return;
+      }
+
       await deleteNote(selectedNoteId);
       setSelectedNoteId(null);
       setDraft(null);
@@ -226,6 +358,7 @@ export function NotesApp() {
       await loadNotes();
       await loadTags();
       setMobileScreen(selectedTag ? "tag-notes" : "list");
+      showToast({ message: "Note permanently deleted." });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete note");
     } finally {
@@ -248,8 +381,40 @@ export function NotesApp() {
   const handleArchive = async () => {
     if (!selectedNoteId || !selectedNote) return;
 
+    const wasArchived = selectedNote.isArchived;
+
     setIsConfirming(true);
     try {
+      // Unsaved notes stay local — archive toggles client state until Save Note.
+      if (isLocalNoteId(selectedNoteId)) {
+        setPendingNotes((current) =>
+          current.map((note) =>
+            note.id === selectedNoteId
+              ? { ...note, isArchived: !note.isArchived }
+              : note,
+          ),
+        );
+        setSelectedNoteId(null);
+        setDraft(null);
+        setConfirmAction(null);
+        setMobileScreen(selectedTag ? "tag-notes" : "list");
+        showToast(
+          wasArchived
+            ? {
+                message: "Note restored to active notes.",
+                action: { label: "All Notes", onClick: goToAllNotes },
+              }
+            : {
+                message: "Note archived.",
+                action: {
+                  label: "Archived Notes",
+                  onClick: goToArchivedNotes,
+                },
+              },
+        );
+        return;
+      }
+
       const updated = await updateNote(selectedNoteId, {
         isArchived: !selectedNote.isArchived,
       });
@@ -259,6 +424,20 @@ export function NotesApp() {
       setConfirmAction(null);
       await loadNotes();
       await loadTags();
+      showToast(
+        wasArchived
+          ? {
+              message: "Note restored to active notes.",
+              action: { label: "All Notes", onClick: goToAllNotes },
+            }
+          : {
+              message: "Note archived.",
+              action: {
+                label: "Archived Notes",
+                onClick: goToArchivedNotes,
+              },
+            },
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to archive note");
     } finally {
@@ -324,10 +503,10 @@ export function NotesApp() {
             <NoteList
               title={listTitle}
               subtitle={listSubtitle}
-              notes={notes}
+              notes={visibleNotes}
               selectedNoteId={selectedNoteId}
               onSelectNote={selectNote}
-              onCreateNote={() => void handleCreateNote()}
+              onCreateNote={handleCreateNote}
               isLoading={isLoading}
             />
 
@@ -418,10 +597,10 @@ export function NotesApp() {
           <NoteList
             title={listTitle}
             subtitle={listSubtitle}
-            notes={notes}
+            notes={visibleNotes}
             selectedNoteId={selectedNoteId}
             onSelectNote={selectNote}
-            onCreateNote={() => void handleCreateNote()}
+            onCreateNote={handleCreateNote}
             onGoBack={handleBackFromTagNotes}
             isLoading={isLoading}
           />
@@ -438,10 +617,10 @@ export function NotesApp() {
             <NoteList
               title={listTitle}
               subtitle={listSubtitle}
-              notes={notes}
+              notes={visibleNotes}
               selectedNoteId={selectedNoteId}
               onSelectNote={selectNote}
-              onCreateNote={() => void handleCreateNote()}
+              onCreateNote={handleCreateNote}
               isLoading={isLoading}
             />
           </div>
