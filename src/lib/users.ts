@@ -1,7 +1,7 @@
 import { ObjectId, type Collection } from "mongodb";
 
 import { getDb } from "@/lib/mongodb";
-import { hashPassword } from "@/lib/password";
+import { hashPassword, verifyPassword } from "@/lib/password";
 import type { AppUser, UserRole } from "@/types/user";
 
 interface UserDocument {
@@ -61,7 +61,7 @@ export async function getUserById(id: string): Promise<AppUser | null> {
   const doc = await collection.findOne({ _id: new ObjectId(id) });
   if (!doc) return null;
 
-  const { passwordHash: _passwordHash, ...user } = toAppUser(doc);
+  const  user = toAppUser(doc);
   return user;
 }
 
@@ -100,3 +100,55 @@ export async function createUser({
     role: doc.role,
   };
 }
+
+export type ChangePasswordResult =
+  | { ok: true }
+  | { ok: false; reason: "user-not-found" | "invalid-current-password" };
+
+export async function changeUserPassword({
+  userId,
+  currentPassword,
+  newPassword,
+}: {
+  userId: string;
+  currentPassword: string;
+  newPassword: string;
+}): Promise<ChangePasswordResult> {
+  if (!ObjectId.isValid(userId)) {
+    return { ok: false, reason: "user-not-found" };
+  }
+
+  const collection = await getUsersCollection();
+  const doc = await collection.findOne({ _id: new ObjectId(userId) });
+
+  if (!doc) {
+    return { ok: false, reason: "user-not-found" };
+  }
+
+  const isCurrentValid = await verifyPassword(
+    currentPassword,
+    doc.passwordHash,
+  );
+
+  if (!isCurrentValid) {
+    return { ok: false, reason: "invalid-current-password" };
+  }
+
+  const result = await collection.updateOne(
+    { _id: doc._id },
+    {
+      $set: {
+        passwordHash: await hashPassword(newPassword),
+        updatedAt: new Date(),
+      },
+    },
+  );
+
+  if (result.matchedCount !== 1) {
+    return { ok: false, reason: "user-not-found" };
+  }
+
+  return { ok: true };
+}
+
+

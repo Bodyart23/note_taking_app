@@ -2,6 +2,9 @@ import type { NextAuthConfig } from "next-auth";
 
 import type { UserRole } from "@/types/user";
 
+/** Session lifetime in seconds (5 minutes). */
+export const SESSION_MAX_AGE_SECONDS = 5 * 60;
+
 /**
  * Edge-safe Auth.js configuration.
  *
@@ -11,7 +14,10 @@ import type { UserRole } from "@/types/user";
  */
 export const authConfig = {
   trustHost: true,
-  session: { strategy: "jwt" },
+  session: {
+    strategy: "jwt",
+    maxAge: SESSION_MAX_AGE_SECONDS,
+  },
   pages: {
     signIn: "/auth/log-in",
     error: "/auth/log-in",

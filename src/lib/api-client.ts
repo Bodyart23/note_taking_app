@@ -73,3 +73,16 @@ export async function fetchTags(): Promise<string[]> {
   const response = await fetch("/api/tags");
   return handleResponse<string[]>(response);
 }
+
+export async function changePassword(input: {
+  currentPassword: string;
+  newPassword: string;
+}): Promise<void> {
+  const response = await fetch("/api/auth/change-password", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+
+  await handleResponse<{ success: boolean }>(response);
+}

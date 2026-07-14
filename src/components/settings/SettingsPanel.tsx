@@ -9,13 +9,25 @@ import type { SettingsSection } from "@/types/theme";
 
 import { ColorThemeSettings } from "./ColorThemeSettings";
 import { SettingsNav } from "./SettingsNav";
+import { ChangePasswordSettings } from "./ChangePasswordSettings";
 
 type SettingsPanelProps = {
   className?: string;
   variant?: "desktop" | "mobile";
-  mobileView?: "menu" | "color-theme";
-  onMobileViewChange?: (view: "menu" | "color-theme") => void;
+  mobileView?: "menu" | "color-theme" | "password";
+  onMobileViewChange?: (view: "menu" | "color-theme" | "password") => void;
 };
+
+function renderActiveSection(section: SettingsSection) {
+  switch (section) {
+    case "color-theme":
+      return <ColorThemeSettings />;
+    case "password":
+      return <ChangePasswordSettings />;
+    default:
+      return <PlaceholderSection section={section} />;
+  }
+}
 
 export function SettingsPanel({
   className,
@@ -36,8 +48,8 @@ export function SettingsPanel({
           activeSection={activeSection}
           onSelect={setActiveSection}
           onNavigate={(section) => {
-            if (section === "color-theme") {
-              onMobileViewChange?.("color-theme");
+            if (section === "color-theme" || section === "password") {
+              onMobileViewChange?.(section);
             }
           }}
         />
@@ -61,6 +73,22 @@ export function SettingsPanel({
     );
   }
 
+  if (variant === "mobile" && mobileView === "password") {
+    return (
+      <section className="flex min-h-0 flex-1 flex-col bg-surface">
+        <button
+          type="button"
+          onClick={() => onMobileViewChange?.("menu")}
+          className="flex items-center gap-1 px-4 py-4 text-sm font-medium text-muted"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Settings
+        </button>
+        <ChangePasswordSettings />
+      </section>
+    );
+  }
+
   return (
     <section className={cn("col-span-2 flex min-h-0 flex-col bg-surface", className)}>
       <div className="flex items-center gap-3 border-b border-border px-6 py-4">
@@ -74,11 +102,7 @@ export function SettingsPanel({
         />
 
         <div className="min-w-0 flex-1 overflow-y-auto">
-          {activeSection === "color-theme" ? (
-            <ColorThemeSettings />
-          ) : (
-            <PlaceholderSection section={activeSection} />
-          )}
+        {renderActiveSection(activeSection)}
         </div>
       </div>
     </section>

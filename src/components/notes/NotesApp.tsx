@@ -45,7 +45,7 @@ export function NotesApp() {
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileScreen, setMobileScreen] = useState<MobileScreen>("list");
   const [mobileSettingsView, setMobileSettingsView] = useState<
-    "menu" | "color-theme"
+    "menu" | "color-theme" | "password"
   >("menu");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

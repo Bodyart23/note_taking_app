@@ -12,5 +12,11 @@ export const signUpSchema = credentialsSchema.extend({
   name: z.string().trim().min(1).max(80).optional(),
 });
 
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, { message: "Current password is required." }),
+  newPassword: credentialsSchema.shape.password,
+});
+
 export type CredentialsInput = z.infer<typeof credentialsSchema>;
 export type SignUpInput = z.infer<typeof signUpSchema>;
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
