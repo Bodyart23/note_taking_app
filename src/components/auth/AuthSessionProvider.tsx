@@ -6,10 +6,29 @@ import { useEffect, useRef } from "react";
 
 import { SESSION_MAX_AGE_SECONDS } from "@/auth.config";
 
+/**
+ * How often (at most) the client asks the server to slide the idle-timeout
+ * window while the user is active. Keeping this well below the session
+ * maxAge guarantees an active user never hits the expiry.
+ */
+const ACTIVITY_EXTEND_INTERVAL_MS =
+  Math.min(60, Math.floor(SESSION_MAX_AGE_SECONDS / 3)) * 1000;
+
+const ACTIVITY_EVENTS = [
+  "mousedown",
+  "mousemove",
+  "keydown",
+  "wheel",
+  "touchstart",
+  "scroll",
+] as const;
+
 function SessionExpiryWatcher({ children }: { children: React.ReactNode }) {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const pathname = usePathname();
   const wasAuthenticatedRef = useRef(false);
+  const lastActivityAtRef = useRef(Date.now());
+  const lastExtendAtRef = useRef(0);
   const isAuthRoute = pathname.startsWith("/auth");
 
   useEffect(() => {
@@ -18,7 +37,44 @@ function SessionExpiryWatcher({ children }: { children: React.ReactNode }) {
     }
   }, [status]);
 
-  // Hard timeout based on session.expires from the server JWT.
+  // Track user activity and periodically ask the server to extend the
+  // session while the user is active, sliding the idle-timeout window.
+  useEffect(() => {
+    if (status !== "authenticated" || isAuthRoute) return;
+
+    const onActivity = () => {
+      lastActivityAtRef.current = Date.now();
+    };
+
+    for (const event of ACTIVITY_EVENTS) {
+      window.addEventListener(event, onActivity, { passive: true });
+    }
+
+    const intervalId = window.setInterval(() => {
+      const now = Date.now();
+      const activeRecently =
+        now - lastActivityAtRef.current < ACTIVITY_EXTEND_INTERVAL_MS;
+      const extendDue =
+        now - lastExtendAtRef.current >= ACTIVITY_EXTEND_INTERVAL_MS;
+
+      if (activeRecently && extendDue) {
+        lastExtendAtRef.current = now;
+        // `update()` triggers the jwt callback with trigger === "update",
+        // which re-issues the token with a fresh expiresAt.
+        void update();
+      }
+    }, 15_000);
+
+    return () => {
+      for (const event of ACTIVITY_EVENTS) {
+        window.removeEventListener(event, onActivity);
+      }
+      window.clearInterval(intervalId);
+    };
+  }, [isAuthRoute, status, update]);
+
+  // Hard timeout based on session.expires from the server JWT. Re-arms
+  // whenever the expiry moves forward after an activity-driven extension.
   useEffect(() => {
     if (status !== "authenticated" || !session?.expires || isAuthRoute) {
       return;

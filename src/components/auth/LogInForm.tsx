@@ -13,16 +13,6 @@ import { GoogleIcon } from "./GoogleIcon";
 const inputClassName =
   "h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus:border-brand disabled:opacity-60";
 
-function AuthDivider({ label }: { label: string }) {
-  return (
-    <div className="flex items-center gap-3">
-      <div className="h-px flex-1 bg-border" />
-      <span className="shrink-0 text-sm text-muted">{label}</span>
-      <div className="h-px flex-1 bg-border" />
-    </div>
-  );
-}
-
 function LogInFormSkeleton() {
   return (
     <div className="space-y-5" aria-hidden>
@@ -119,12 +109,6 @@ function LogInFormFields() {
           >
             Password
           </label>
-          <Link
-            href="/auth/forgot-password"
-            className="text-sm text-muted underline-offset-2 hover:text-foreground hover:underline"
-          >
-            Forgot
-          </Link>
         </div>
         <div className="relative">
           <input
@@ -158,17 +142,6 @@ function LogInFormFields() {
       >
         {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
         {isSubmitting ? "Logging in..." : "Login"}
-      </button>
-
-      <AuthDivider label="Or log in with:" />
-
-      <button
-        type="button"
-        onClick={() => signIn("google", { callbackUrl: getCallbackUrl() })}
-        className="flex h-11 w-full items-center justify-center gap-3 rounded-lg border border-border bg-surface text-sm font-medium text-foreground transition-colors hover:bg-surface-muted"
-      >
-        <GoogleIcon className="h-5 w-5" />
-        Google
       </button>
     </form>
   );

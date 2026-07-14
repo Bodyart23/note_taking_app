@@ -2,7 +2,7 @@ import type { NextAuthConfig } from "next-auth";
 
 import type { UserRole } from "@/types/user";
 
-/** Absolute session lifetime in seconds (5 minutes from sign-in). */
+/** Idle timeout in seconds — the session expires after 5 minutes of inactivity. */
 export const SESSION_MAX_AGE_SECONDS = 5 * 60;
 
 /**
@@ -29,13 +29,12 @@ export const authConfig = {
   },
   providers: [],
   callbacks: {
-    jwt({ token, user }) {
+    jwt({ token, user, trigger }) {
       const now = Math.floor(Date.now() / 1000);
 
       if (user) {
         token.id = user.id ?? token.sub;
         token.role = user.role ?? "user";
-        // Absolute clock from sign-in — not extended by /api/auth/session polls.
         token.loginAt = now;
         token.expiresAt = now + SESSION_MAX_AGE_SECONDS;
         return token;
@@ -53,7 +52,12 @@ export const authConfig = {
         return null;
       }
 
-      if (expiresAt !== undefined) {
+      if (trigger === "update") {
+        // The client calls `update()` only while the user is active, so this
+        // slides the idle-timeout window. Plain session polls (trigger
+        // undefined) never extend it, letting idle sessions expire.
+        token.expiresAt = now + SESSION_MAX_AGE_SECONDS;
+      } else if (expiresAt !== undefined) {
         token.expiresAt = expiresAt;
       }
 
