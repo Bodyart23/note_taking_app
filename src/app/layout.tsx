@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Newsreader } from "next/font/google";
 
+import { auth } from "@/auth";
 import { AuthSessionProvider } from "@/components/auth/AuthSessionProvider";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -31,11 +32,15 @@ export const metadata: Metadata = {
   description: "A modern note-taking application built with Next.js",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Fetch the session on the server so SessionProvider starts hydrated and
+  // the client does not need an extra /api/auth/session round trip on load.
+  const session = await auth();
+
   return (
     <html
       lang="en"
@@ -43,7 +48,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${newsreader.variable} h-full antialiased`}
     >
       <body className="h-full flex flex-col overflow-hidden bg-background font-sans text-foreground">
-        <AuthSessionProvider>
+        <AuthSessionProvider session={session}>
           <ThemeProvider>
             <ToastProvider>{children}</ToastProvider>
           </ThemeProvider>

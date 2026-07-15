@@ -1,5 +1,6 @@
 "use client";
 
+import type { Session } from "next-auth";
 import { SessionProvider, signOut, useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
@@ -113,11 +114,17 @@ function SessionExpiryWatcher({ children }: { children: React.ReactNode }) {
 
 export function AuthSessionProvider({
   children,
+  session,
 }: {
   children: React.ReactNode;
+  session: Session | null;
 }) {
   return (
     <SessionProvider
+      // Hydrating the provider with the server-fetched session marks it as
+      // already synced, so the client skips the /api/auth/session fetch on
+      // mount. The refetch interval keeps it fresh afterwards.
+      session={session}
       refetchInterval={Math.min(30, SESSION_MAX_AGE_SECONDS)}
       refetchOnWindowFocus
     >

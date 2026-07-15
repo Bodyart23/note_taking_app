@@ -9,11 +9,14 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export async function fetchNotes(params?: {
-  archived?: boolean;
-  search?: string;
-  tag?: string;
-}): Promise<Note[]> {
+export async function fetchNotes(
+  params?: {
+    archived?: boolean;
+    search?: string;
+    tag?: string;
+  },
+  signal?: AbortSignal,
+): Promise<Note[]> {
   const searchParams = new URLSearchParams();
 
   if (params?.archived !== undefined) {
@@ -29,7 +32,9 @@ export async function fetchNotes(params?: {
   }
 
   const query = searchParams.toString();
-  const response = await fetch(`/api/notes${query ? `?${query}` : ""}`);
+  const response = await fetch(`/api/notes${query ? `?${query}` : ""}`, {
+    signal,
+  });
   return handleResponse<Note[]>(response);
 }
 
@@ -69,8 +74,8 @@ export async function deleteNote(id: string): Promise<void> {
   await handleResponse<{ success: boolean }>(response);
 }
 
-export async function fetchTags(): Promise<string[]> {
-  const response = await fetch("/api/tags");
+export async function fetchTags(signal?: AbortSignal): Promise<string[]> {
+  const response = await fetch("/api/tags", { signal });
   return handleResponse<string[]>(response);
 }
 

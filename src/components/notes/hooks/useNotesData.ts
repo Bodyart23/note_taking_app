@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   createNote,
@@ -57,6 +57,15 @@ export function useNotesData({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Mirror of `selectedNoteId` so `loadNotes` can read the current selection
+  // without depending on it. Depending on `selectedNoteId` directly would
+  // recreate `loadNotes` after the initial fetch selects a note, re-running
+  // the load effect and firing every request a second time.
+  const selectedNoteIdRef = useRef(selectedNoteId);
+  useEffect(() => {
+    selectedNoteIdRef.current = selectedNoteId;
+  }, [selectedNoteId]);
+
   const visibleNotes = useMemo(() => {
     const matchingPending = pendingNotes.filter((note) => {
       if (activeView === "archived") return note.isArchived;
@@ -80,16 +89,19 @@ export function useNotesData({
     selectedNote && draft ? isDraftDirty(selectedNote, draft) : false;
 
   const loadNotes = useCallback(
-    async (preserveSelection = true) => {
+    async (preserveSelection = true, signal?: AbortSignal) => {
       setIsLoading(true);
       setError(null);
 
       try {
-        const data = await fetchNotes({
-          archived: activeView === "archived",
-          search: searchQuery || undefined,
-          tag: applyTagFilter ? (selectedTag ?? undefined) : undefined,
-        });
+        const data = await fetchNotes(
+          {
+            archived: activeView === "archived",
+            search: searchQuery || undefined,
+            tag: applyTagFilter ? (selectedTag ?? undefined) : undefined,
+          },
+          signal,
+        );
 
         setNotes(data);
         setSelectedNoteId((currentId) => {
@@ -109,7 +121,9 @@ export function useNotesData({
           return data[0]?.id ?? null;
         });
         setDraft((currentDraft) => {
-          const currentId = preserveSelection ? selectedNoteId : null;
+          const currentId = preserveSelection
+            ? selectedNoteIdRef.current
+            : null;
 
           if (currentId && isLocalNoteId(currentId) && currentDraft) {
             return currentDraft;
@@ -132,37 +146,49 @@ export function useNotesData({
           return draftFromNote(nextNote);
         });
       } catch (err) {
+        // An aborted request means a newer load superseded this one (or the
+        // component unmounted) — don't surface it as an error.
+        if (err instanceof DOMException && err.name === "AbortError") {
+          return;
+        }
         setError(err instanceof Error ? err.message : "Failed to load notes");
       } finally {
-        setIsLoading(false);
+        if (!signal?.aborted) {
+          setIsLoading(false);
+        }
       }
     },
-    [activeView, applyTagFilter, searchQuery, selectedNoteId, selectedTag],
+    [activeView, applyTagFilter, searchQuery, selectedTag],
   );
 
-  const loadTags = useCallback(async () => {
+  const loadTags = useCallback(async (signal?: AbortSignal) => {
     try {
-      const data = await fetchTags();
+      const data = await fetchTags(signal);
       setTags(data);
     } catch {
-      setTags([]);
+      if (!signal?.aborted) {
+        setTags([]);
+      }
     }
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
 
     async function load() {
-      await loadNotes();
-      if (!cancelled) {
-        await loadTags();
+      await loadNotes(true, controller.signal);
+      if (!controller.signal.aborted) {
+        await loadTags(controller.signal);
       }
     }
 
     void load();
 
     return () => {
-      cancelled = true;
+      // Abort in-flight requests when the effect re-runs (filters changed) or
+      // the component unmounts, so stale responses never hit the network twice
+      // or overwrite fresh state.
+      controller.abort();
     };
   }, [loadNotes, loadTags]);
 
