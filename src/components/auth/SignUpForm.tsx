@@ -7,8 +7,6 @@ import { useEffect, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
-import { GoogleIcon } from "./GoogleIcon";
-
 const inputClassName =
   "h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus:border-brand disabled:opacity-60";
 

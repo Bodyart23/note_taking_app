@@ -5,5 +5,4 @@ export interface AppUser {
   email: string;
   name: string | null;
   role: UserRole;
-  passwordHash?: string;
 }

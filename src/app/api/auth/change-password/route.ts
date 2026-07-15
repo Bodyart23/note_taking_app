@@ -1,12 +1,21 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { requireUserId } from "@/lib/auth/require-user";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { changeUserPassword } from "@/lib/users";
 import { changePasswordSchema } from "@/lib/validation/auth";
 
 export async function PATCH(request: NextRequest) {
   const authResult = await requireUserId();
   if (authResult instanceof NextResponse) return authResult;
+
+  // Keyed by user id: verifying the current password makes this endpoint an
+  // authenticated brute-force oracle without a limit.
+  const rate = checkRateLimit("change-password", authResult.userId, {
+    limit: 5,
+    windowMs: 15 * 60 * 1000,
+  });
+  if (!rate.ok) return rateLimitResponse(rate.retryAfterSeconds);
 
   let body: unknown;
 

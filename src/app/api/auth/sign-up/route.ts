@@ -1,9 +1,21 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
 import { createUser, getUserByEmail } from "@/lib/users";
 import { signUpSchema } from "@/lib/validation/auth";
 
 export async function POST(request: NextRequest) {
+  // Per-IP limit blocks bulk account creation and enumeration via 409s.
+  const rate = checkRateLimit("sign-up", getClientIp(request), {
+    limit: 5,
+    windowMs: 10 * 60 * 1000,
+  });
+  if (!rate.ok) return rateLimitResponse(rate.retryAfterSeconds);
+
   let body: unknown;
 
   try {

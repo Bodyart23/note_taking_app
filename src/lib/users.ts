@@ -61,7 +61,8 @@ export async function getUserById(id: string): Promise<AppUser | null> {
   const doc = await collection.findOne({ _id: new ObjectId(id) });
   if (!doc) return null;
 
-  const  user = toAppUser(doc);
+  // Strip the hash so it can never reach an API response by accident.
+  const { passwordHash: _passwordHash, ...user } = toAppUser(doc);
   return user;
 }
 
