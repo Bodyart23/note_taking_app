@@ -151,15 +151,28 @@ export async function deleteNote(userId: string, id: string): Promise<boolean> {
   return deleted.deletedCount === 1;
 }
 
-export async function getAllTags(userId: string): Promise<string[]> {
-  const notes = await getNotes({ userId });
-  const tags = new Set<string>();
+export async function getAllTags(
+  userId: string,
+  archived?: boolean,
+): Promise<string[]> {
+  const collection = await getNotesCollection();
 
-  for (const note of notes) {
-    for (const tag of note.tags) {
-      tags.add(tag);
-    }
+  const match: Record<string, unknown> = { userId };
+  if (archived !== undefined) {
+    match.isArchived = archived;
   }
 
-  return [...tags].sort((a, b) => a.localeCompare(b));
+  // Aggregate distinct tags in the database instead of loading every note
+  // document into memory.
+  const results = await collection
+    .aggregate<{ _id: string }>([
+      { $match: match },
+      { $unwind: "$tags" },
+      { $group: { _id: "$tags" } },
+    ])
+    .toArray();
+
+  return results
+    .map((entry) => entry._id)
+    .sort((a, b) => a.localeCompare(b));
 }

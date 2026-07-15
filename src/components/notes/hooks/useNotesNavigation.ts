@@ -55,8 +55,10 @@ export function useNotesNavigation() {
 
   const handleDesktopSelectTag = (tag: string | null) => {
     setSelectedTag(tag);
-    setActiveView("all");
     setSearchQuery("");
+    // Keep the All/Archived context so archived tags filter archived notes;
+    // only leave auxiliary views (settings, search) for the tag results.
+    setActiveView((current) => (current === "archived" ? current : "all"));
   };
 
   const handleOpenSettings = () => {
@@ -98,15 +100,19 @@ export function useNotesNavigation() {
   };
 
   const listTitle =
-    activeView === "archived"
-      ? "Archived Notes"
-      : applyTagFilter && selectedTag
-        ? `Notes Tagged: ${selectedTag}`
+    applyTagFilter && selectedTag
+      ? activeView === "archived"
+        ? `Archived Notes Tagged: ${selectedTag}`
+        : `Notes Tagged: ${selectedTag}`
+      : activeView === "archived"
+        ? "Archived Notes"
         : "All Notes";
 
   const listSubtitle =
     applyTagFilter && selectedTag
-      ? `All notes with the '${selectedTag}' tag are shown here.`
+      ? activeView === "archived"
+        ? `All archived notes with the '${selectedTag}' tag are shown here.`
+        : `All notes with the '${selectedTag}' tag are shown here.`
       : undefined;
 
   const showMobileSearch = activeView === "search" && mobileScreen === "list";

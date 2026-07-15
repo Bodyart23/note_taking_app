@@ -1,14 +1,24 @@
 "use client";
 
+import type { Note } from "@/types/note";
+
 import { DesktopNotesLayout } from "./DesktopNotesLayout";
 import { MobileNotesLayout } from "./MobileNotesLayout";
 import { NoteConfirmModals } from "./NoteConfirmModals";
 import { useNotesData } from "./hooks/useNotesData";
 import { useNotesNavigation } from "./hooks/useNotesNavigation";
 
-export function NotesApp() {
+type NotesAppProps = {
+  /** Server-prefetched notes for the default "All Notes" view. */
+  initialNotes?: Note[];
+  initialTags?: string[];
+};
+
+export function NotesApp({ initialNotes, initialTags }: NotesAppProps) {
   const nav = useNotesNavigation();
   const data = useNotesData({
+    initialNotes,
+    initialTags,
     activeView: nav.activeView,
     searchQuery: nav.searchQuery,
     selectedTag: nav.selectedTag,

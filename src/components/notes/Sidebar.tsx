@@ -43,7 +43,7 @@ export function Sidebar({
         <SidebarLink
           icon={Archive}
           label="Archived Notes"
-          isActive={activeView === "archived"}
+          isActive={activeView === "archived" && !selectedTag}
           onClick={() => {
             onSelectTag(null);
             onNavigate("archived");
@@ -58,10 +58,9 @@ export function Sidebar({
             <li key={tag}>
               <button
                 type="button"
-                onClick={() => {
-                  onNavigate("all");
-                  onSelectTag(tag);
-                }}
+                // View handling lives in the navigation hook so tag clicks
+                // keep the current All/Archived context.
+                onClick={() => onSelectTag(tag)}
                 className={cn(
                   "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                   selectedTag === tag

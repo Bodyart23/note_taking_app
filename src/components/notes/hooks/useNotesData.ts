@@ -24,6 +24,8 @@ import {
 } from "../note-helpers";
 
 type UseNotesDataOptions = {
+  initialNotes?: Note[];
+  initialTags?: string[];
   activeView: NotesActiveView;
   searchQuery: string;
   selectedTag: string | null;
@@ -36,6 +38,8 @@ type UseNotesDataOptions = {
 };
 
 export function useNotesData({
+  initialNotes,
+  initialTags,
   activeView,
   searchQuery,
   selectedTag,
@@ -47,15 +51,24 @@ export function useNotesData({
   navigateForCreateNote,
 }: UseNotesDataOptions) {
   const { showToast } = useToast();
-  const [notes, setNotes] = useState<Note[]>([]);
+  const hasInitialData = initialNotes !== undefined;
+  const [notes, setNotes] = useState<Note[]>(initialNotes ?? []);
   const [pendingNotes, setPendingNotes] = useState<Note[]>([]);
-  const [tags, setTags] = useState<string[]>([]);
-  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<DraftNote | null>(null);
+  const [tags, setTags] = useState<string[]>(initialTags ?? []);
+  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(
+    initialNotes?.[0]?.id ?? null,
+  );
+  const [draft, setDraft] = useState<DraftNote | null>(
+    initialNotes?.[0] ? draftFromNote(initialNotes[0]) : null,
+  );
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
   const [isConfirming, setIsConfirming] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!hasInitialData);
   const [error, setError] = useState<string | null>(null);
+
+  // The server already rendered the default view's data, so the first
+  // client-side load effect would just refetch the same thing. Skip it once.
+  const skipInitialLoadRef = useRef(hasInitialData);
 
   // Mirror of `selectedNoteId` so `loadNotes` can read the current selection
   // without depending on it. Depending on `selectedNoteId` directly would
@@ -161,18 +174,31 @@ export function useNotesData({
     [activeView, applyTagFilter, searchQuery, selectedTag],
   );
 
-  const loadTags = useCallback(async (signal?: AbortSignal) => {
-    try {
-      const data = await fetchTags(signal);
-      setTags(data);
-    } catch {
-      if (!signal?.aborted) {
-        setTags([]);
+  const loadTags = useCallback(
+    async (signal?: AbortSignal) => {
+      try {
+        // Tags are scoped to the current view: unarchived tags for All Notes,
+        // archived-note tags for Archived Notes.
+        const data = await fetchTags(
+          { archived: activeView === "archived" },
+          signal,
+        );
+        setTags(data);
+      } catch {
+        if (!signal?.aborted) {
+          setTags([]);
+        }
       }
-    }
-  }, []);
+    },
+    [activeView],
+  );
 
   useEffect(() => {
+    if (skipInitialLoadRef.current) {
+      skipInitialLoadRef.current = false;
+      return;
+    }
+
     const controller = new AbortController();
 
     async function load() {

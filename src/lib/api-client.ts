@@ -74,8 +74,20 @@ export async function deleteNote(id: string): Promise<void> {
   await handleResponse<{ success: boolean }>(response);
 }
 
-export async function fetchTags(signal?: AbortSignal): Promise<string[]> {
-  const response = await fetch("/api/tags", { signal });
+export async function fetchTags(
+  params?: { archived?: boolean },
+  signal?: AbortSignal,
+): Promise<string[]> {
+  const searchParams = new URLSearchParams();
+
+  if (params?.archived !== undefined) {
+    searchParams.set("archived", String(params.archived));
+  }
+
+  const query = searchParams.toString();
+  const response = await fetch(`/api/tags${query ? `?${query}` : ""}`, {
+    signal,
+  });
   return handleResponse<string[]>(response);
 }
 
