@@ -53,9 +53,10 @@ export const authConfig = {
       }
 
       if (trigger === "update") {
-        // The client calls `update()` only while the user is active, so this
-        // slides the idle-timeout window. Plain session polls (trigger
-        // undefined) never extend it, letting idle sessions expire.
+        // Client must call `update({ ... })` with a body (POST /session).
+        // A bare `update()` is a GET poll and never reaches this branch.
+        // Activity-driven updates slide the idle-timeout window; plain
+        // session polls leave expiresAt unchanged so idle sessions expire.
         token.expiresAt = now + SESSION_MAX_AGE_SECONDS;
       } else if (expiresAt !== undefined) {
         token.expiresAt = expiresAt;
