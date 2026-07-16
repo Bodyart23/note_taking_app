@@ -65,10 +65,17 @@ function SessionExpiryWatcher({ children }: { children: React.ReactNode }) {
         now - lastExtendAtRef.current >= ACTIVITY_EXTEND_INTERVAL_MS;
 
       if (activeRecently && extendDue) {
+        // Optimistic lock to avoid parallel extend calls; rolled back if the
+        // request is skipped (e.g. SessionProvider still loading) or fails.
         lastExtendAtRef.current = now;
-        // `update()` triggers the jwt callback with trigger === "update",
-        // which re-issues the token with a fresh expiresAt.
-        void update();
+        // Auth.js only sets jwt `trigger: "update"` on POST /session.
+        // `update()` with no args does a GET and never slides expiresAt —
+        // pass a body so the idle-timeout window actually extends.
+        void update({ extendedAt: now }).then((nextSession) => {
+          if (!nextSession) {
+            lastExtendAtRef.current = 0;
+          }
+        });
       }
     }, 15_000);
 
@@ -97,12 +104,32 @@ function SessionExpiryWatcher({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // One last extend attempt before absolute expiry. Must run early — the
+    // jwt callback rejects tokens once `expiresAt` has already passed.
+    const leadMs = Math.min(20_000, Math.max(0, msUntilExpiry - 1_000));
+    const extendTimeoutId = window.setTimeout(() => {
+      const recentlyActive =
+        Date.now() - lastActivityAtRef.current < ACTIVITY_EXTEND_INTERVAL_MS;
+      if (!recentlyActive) return;
+
+      const now = Date.now();
+      lastExtendAtRef.current = now;
+      void update({ extendedAt: now }).then((nextSession) => {
+        if (!nextSession) {
+          lastExtendAtRef.current = 0;
+        }
+      });
+    }, leadMs);
+
     const timeoutId = window.setTimeout(() => {
       void signOut({ callbackUrl: "/auth/log-in" });
     }, msUntilExpiry + 250);
 
-    return () => window.clearTimeout(timeoutId);
-  }, [isAuthRoute, session?.expires, status]);
+    return () => {
+      window.clearTimeout(extendTimeoutId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [isAuthRoute, session?.expires, status, update]);
 
   // If a refetch discovers the server session is gone, leave protected pages.
   useEffect(() => {
