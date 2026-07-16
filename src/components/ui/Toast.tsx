@@ -7,6 +7,7 @@ import {
   useContext,
   useEffect,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
@@ -33,14 +34,17 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 
 const TOAST_DURATION_MS = 4000;
 
+/** No-op subscribe: client snapshot is constant (`true`). */
+const subscribeNoop = () => () => {};
+
+/** True only after hydration — avoids createPortal during SSR. */
+function useIsClient() {
+  return useSyncExternalStore(subscribeNoop, () => true, () => false);
+}
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-  // Defer portal until after hydration so SSR and the first client pass match.
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const isClient = useIsClient();
 
   const dismissToast = useCallback((id: string) => {
     setToasts((current) => current.filter((toast) => toast.id !== id));
@@ -54,7 +58,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      {mounted
+      {isClient
         ? createPortal(
             <div
               className="pointer-events-none fixed top-4 right-4 z-[60] flex w-[min(100%-2rem,28rem)] flex-col items-stretch gap-2 sm:top-6 sm:right-6"
