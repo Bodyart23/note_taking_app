@@ -1,5 +1,8 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
+
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import type { Note } from "@/types/note";
 
 import { DesktopNotesLayout } from "./DesktopNotesLayout";
@@ -15,12 +18,18 @@ type NotesAppProps = {
 };
 
 export function NotesApp({ initialNotes, initialTags }: NotesAppProps) {
+  const isHydrated = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
   const nav = useNotesNavigation();
+  const debouncedSearchQuery = useDebouncedValue(nav.searchQuery, 300);
   const data = useNotesData({
     initialNotes,
     initialTags,
     activeView: nav.activeView,
-    searchQuery: nav.searchQuery,
+    searchQuery: debouncedSearchQuery,
     selectedTag: nav.selectedTag,
     applyTagFilter: nav.applyTagFilter,
     goToAllNotes: nav.goToAllNotes,
@@ -31,7 +40,10 @@ export function NotesApp({ initialNotes, initialTags }: NotesAppProps) {
   });
 
   return (
-    <div className="flex h-dvh flex-col bg-background text-foreground">
+    <div
+      className="flex h-dvh flex-col bg-background text-foreground"
+      data-testid={isHydrated ? "notes-app-ready" : undefined}
+    >
       <DesktopNotesLayout
         activeView={nav.activeView}
         selectedTag={nav.selectedTag}

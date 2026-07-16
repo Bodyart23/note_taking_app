@@ -62,8 +62,13 @@ export async function getUserById(id: string): Promise<AppUser | null> {
   if (!doc) return null;
 
   // Strip the hash so it can never reach an API response by accident.
-  const { passwordHash: _passwordHash, ...user } = toAppUser(doc);
-  return user;
+  const userWithHash = toAppUser(doc);
+  return {
+    id: userWithHash.id,
+    email: userWithHash.email,
+    name: userWithHash.name,
+    role: userWithHash.role,
+  };
 }
 
 type CreateUserInput = {

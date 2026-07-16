@@ -28,7 +28,7 @@ function SessionExpiryWatcher({ children }: { children: React.ReactNode }) {
   const { data: session, status, update } = useSession();
   const pathname = usePathname();
   const wasAuthenticatedRef = useRef(false);
-  const lastActivityAtRef = useRef(Date.now());
+  const lastActivityAtRef = useRef<number>(0);
   const lastExtendAtRef = useRef(0);
   const isAuthRoute = pathname.startsWith("/auth");
 
@@ -37,6 +37,12 @@ function SessionExpiryWatcher({ children }: { children: React.ReactNode }) {
       wasAuthenticatedRef.current = true;
     }
   }, [status]);
+
+  // Initialize after mount to avoid calling impure functions (Date.now) during
+  // render, which would otherwise trip eslint's purity rule.
+  useEffect(() => {
+    lastActivityAtRef.current = Date.now();
+  }, []);
 
   // Track user activity and periodically ask the server to extend the
   // session while the user is active, sliding the idle-timeout window.

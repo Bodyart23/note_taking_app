@@ -3,31 +3,12 @@
 import { Eye, EyeOff, Info, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { cn } from "@/lib/utils";
 
 const inputClassName =
   "h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus:border-brand disabled:opacity-60";
-
-function SignUpFormSkeleton() {
-  return (
-    <div className="space-y-5" aria-hidden>
-      <div className="space-y-2">
-        <div className="h-4 w-24 rounded bg-surface-muted" />
-        <div className="h-11 w-full rounded-lg bg-surface-muted" />
-      </div>
-      <div className="space-y-2">
-        <div className="h-4 w-16 rounded bg-surface-muted" />
-        <div className="h-11 w-full rounded-lg bg-surface-muted" />
-        <div className="h-4 w-36 rounded bg-surface-muted" />
-      </div>
-      <div className="h-11 w-full rounded-lg bg-surface-muted" />
-      <div className="h-4 w-32 rounded bg-surface-muted" />
-      <div className="h-11 w-full rounded-lg bg-surface-muted" />
-    </div>
-  );
-}
 
 function SignUpFormFields() {
   const router = useRouter();
@@ -159,15 +140,5 @@ function SignUpFormFields() {
 }
 
 export function SignUpForm() {
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  if (!isMounted) {
-    return <SignUpFormSkeleton />;
-  }
-
   return <SignUpFormFields />;
 }

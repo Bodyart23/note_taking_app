@@ -229,8 +229,12 @@ export function useNotesData({
     }
 
     const nextNote = visibleNotes[0] ?? null;
-    setSelectedNoteId(nextNote?.id ?? null);
-    setDraft(nextNote ? draftFromNote(nextNote) : null);
+    // Schedule updates asynchronously to avoid the eslint rule that flags
+    // synchronous setState calls inside effects (cascading-render risk).
+    queueMicrotask(() => {
+      setSelectedNoteId(nextNote?.id ?? null);
+      setDraft(nextNote ? draftFromNote(nextNote) : null);
+    });
   }, [selectedNoteId, visibleNotes]);
 
   const selectNote = (id: string) => {

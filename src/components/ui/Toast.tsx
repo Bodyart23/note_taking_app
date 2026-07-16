@@ -35,6 +35,7 @@ const TOAST_DURATION_MS = 4000;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  // Defer portal until after hydration so SSR and the first client pass match.
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {

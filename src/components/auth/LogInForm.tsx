@@ -1,36 +1,14 @@
 "use client";
 
 import { Eye, EyeOff, Loader2 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { cn } from "@/lib/utils";
 
 const inputClassName =
   "h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus:border-brand disabled:opacity-60";
-
-function LogInFormSkeleton() {
-  return (
-    <div className="space-y-5" aria-hidden>
-      <div className="space-y-2">
-        <div className="h-4 w-24 rounded bg-surface-muted" />
-        <div className="h-11 w-full rounded-lg bg-surface-muted" />
-      </div>
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="h-4 w-16 rounded bg-surface-muted" />
-          <div className="h-4 w-12 rounded bg-surface-muted" />
-        </div>
-        <div className="h-11 w-full rounded-lg bg-surface-muted" />
-      </div>
-      <div className="h-11 w-full rounded-lg bg-surface-muted" />
-      <div className="h-4 w-32 rounded bg-surface-muted" />
-      <div className="h-11 w-full rounded-lg bg-surface-muted" />
-    </div>
-  );
-}
 
 function getCallbackUrl(): string {
   const target = new URLSearchParams(window.location.search).get("callbackUrl");
@@ -146,15 +124,5 @@ function LogInFormFields() {
 }
 
 export function LogInForm() {
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  if (!isMounted) {
-    return <LogInFormSkeleton />;
-  }
-
   return <LogInFormFields />;
 }

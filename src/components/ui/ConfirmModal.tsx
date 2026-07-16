@@ -5,7 +5,6 @@ import {
   useEffect,
   useId,
   useRef,
-  useState,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
@@ -46,11 +45,7 @@ export function ConfirmModal({
   const descriptionId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const isBrowser = typeof document !== "undefined";
 
   useEffect(() => {
     if (!open) return;
@@ -121,7 +116,7 @@ export function ConfirmModal({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown, open]);
 
-  if (!mounted || !open) return null;
+  if (!open || !isBrowser) return null;
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center sm:p-6">

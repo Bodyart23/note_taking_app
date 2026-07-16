@@ -1,9 +1,8 @@
 "use client";
 
-import { ChevronLeft, Settings } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { useState } from "react";
 
-import { SearchBar } from "@/components/notes/SearchBar";
 import { cn } from "@/lib/utils";
 import type { SettingsSection } from "@/types/theme";
 
